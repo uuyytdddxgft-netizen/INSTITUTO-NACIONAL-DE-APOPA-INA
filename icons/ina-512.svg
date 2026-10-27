@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="INA Reporta">
+  <rect width="512" height="512" rx="112" fill="#123b70"/>
+  <path d="M76 356h360v48H76z" fill="#ffc928"/>
+  <path d="M132 122h70v242h-70zm96 0h62l81 125V122h65v242h-59l-84-130v130h-65z" fill="#fff"/>
+</svg>
