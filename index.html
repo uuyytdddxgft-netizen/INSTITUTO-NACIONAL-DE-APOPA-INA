@@ -2367,6 +2367,10 @@ footer strong {
           <strong>Soy adulto responsable</strong>
           <span>Ingresar nombre, DUI y teléfono del adulto.</span>
         </button>
+        <button class="role-choice" type="button" data-select-role="guest">
+          <strong>Entrar como invitado</strong>
+          <span>Probar la aplicación sin completar datos personales.</span>
+        </button>
       </div>
       <p class="role-note">Note INA es un prototipo: no verifica identidades ni envía alertas. Si alguien está en peligro, avisa directamente a un docente o adulto de confianza.</p>
     </main>
@@ -2907,9 +2911,10 @@ function createAnonymousSessionId() {
 function configureAccessForRole(role) {
   activeRole = role;
   const isAdult = role === "adult";
-  const studentCodeRequired = !isAdult && Boolean(window.INACloud?.configured);
+  const isGuest = role === "guest";
+  const studentCodeRequired = !isAdult && !isGuest && Boolean(window.INACloud?.configured);
   const adultEmailRequired = isAdult && Boolean(window.INACloud?.configured);
-  studentFields.hidden = isAdult;
+  studentFields.hidden = isAdult || isGuest;
   adultFields.hidden = !isAdult;
   document.querySelector("#student-code-fields").hidden = !studentCodeRequired;
   document.querySelector("#adult-login-fields").hidden = !adultEmailRequired;
@@ -2925,25 +2930,34 @@ function configureAccessForRole(role) {
   }
   adultEmailField.required = adultEmailRequired;
   adultEmailField.disabled = !adultEmailRequired;
-  if (isAdult) studentCodeField.value = "";
-  document.querySelector("#access-title").textContent = isAdult
-    ? "Datos del adulto responsable"
-    : "Acceso de estudiante";
-  document.querySelector("#access-description").textContent = isAdult
-    ? "Completa el nombre, DUI y teléfono del adulto responsable."
-    : window.INACloud?.configured
-      ? "Ingresa el código de verificación de un solo uso entregado por el INA."
-      : "Ingresa para probar la aplicación. En este modo, los reportes solo se guardan en este dispositivo.";
-  document.querySelector("#access-hint").textContent = isAdult
-    ? (window.INACloud?.configured
-      ? "El correo autorizado es necesario para recibir el enlace seguro. El nombre, DUI y teléfono no se guardan ni se envían a Supabase."
-      : "El prototipo no verifica identidades. El nombre, DUI y teléfono no se guardan ni se adjuntan a reportes.")
-    : (window.INACloud?.configured
-      ? "El código de un solo uso autoriza esta sesión y no se guarda en el reporte."
-      : "No se solicitan datos personales en este modo de demostración local.");
-  document.querySelector("#access-submit").innerHTML = isAdult
-    ? 'Continuar como adulto responsable <span aria-hidden="true">→</span>'
-    : 'Continuar como estudiante <span aria-hidden="true">→</span>';
+  if (isAdult || isGuest) studentCodeField.value = "";
+  const titleLabel = isGuest
+    ? "Cuenta de invitado"
+    : isAdult
+      ? "Datos del adulto responsable"
+      : "Acceso de estudiante";
+  document.querySelector("#access-title").textContent = titleLabel;
+  document.querySelector("#access-description").textContent = isGuest
+    ? "Continúa en modo invitado para probar la aplicación sin completar ningún dato personal."
+    : isAdult
+      ? "Completa el nombre, DUI y teléfono del adulto responsable."
+      : window.INACloud?.configured
+        ? "Ingresa el código de verificación de un solo uso entregado por el INA."
+        : "Ingresa para probar la aplicación. En este modo, los reportes solo se guardan en este dispositivo.";
+  document.querySelector("#access-hint").textContent = isGuest
+    ? "Esta sesión será local y temporal. No se solicita información personal ni se valida identidad."
+    : isAdult
+      ? (window.INACloud?.configured
+        ? "El correo autorizado es necesario para recibir el enlace seguro. El nombre, DUI y teléfono no se guardan ni se envían a Supabase."
+        : "El prototipo no verifica identidades. El nombre, DUI y teléfono no se guardan ni se adjuntan a reportes.")
+      : (window.INACloud?.configured
+        ? "El código de un solo uso autoriza esta sesión y no se guarda en el reporte."
+        : "No se solicitan datos personales en este modo de demostración local.");
+  document.querySelector("#access-submit").innerHTML = isGuest
+    ? 'Continuar como invitado <span aria-hidden="true">→</span>'
+    : isAdult
+      ? 'Continuar como adulto responsable <span aria-hidden="true">→</span>'
+      : 'Continuar como estudiante <span aria-hidden="true">→</span>';
   try {
     sessionStorage.removeItem(STUDENT_NIE_KEY);
     sessionStorage.removeItem("note-ina.student-name");
@@ -2975,7 +2989,9 @@ function showApp(profile) {
   formMessage.classList.remove("is-error");
   document.querySelector("#role-tag").textContent = profile.role === "adult"
     ? "Adulto responsable"
-    : "Estudiante";
+    : profile.role === "guest"
+      ? "Invitado"
+      : "Estudiante";
   linkedStudentField.hidden = profile.role !== "adult" || !window.INACloud?.configured;
   if (profile.role === "adult" && profile.studentIds?.length) {
     linkedStudentSelect.replaceChildren();
@@ -2989,11 +3005,13 @@ function showApp(profile) {
     profile.studentId = linkedStudentSelect.value;
   }
   document.querySelector("#migration-panel").hidden =
-    !window.INACloud?.configured || profile.role === "adult";
+    !window.INACloud?.configured || profile.role === "adult" || profile.role === "guest";
   document.querySelector("#report-scope-note").textContent = window.INACloud?.configured
     ? (profile.role === "adult"
       ? "Tus reportes quedan asociados únicamente a estudiantes vinculados por el INA. El historial completo solo está disponible para docentes autorizados."
-      : "Solo tú puedes consultar tus reportes diarios. El historial en la nube está disponible para docentes autorizados por el instituto.")
+      : profile.role === "guest"
+        ? "Estás usando un acceso invitado. Los reportes solo se guardan en este dispositivo y no se verifican con la cuenta institucional."
+        : "Solo tú puedes consultar tus reportes diarios. El historial en la nube está disponible para docentes autorizados por el instituto.")
     : "Esta lista muestra solo los reportes de hoy; mañana se inicia un día nuevo. Los reportes anteriores, con fecha y fotos, permanecen archivados en este dispositivo.";
   renderReports();
 }
@@ -3388,23 +3406,24 @@ accessForm.addEventListener("submit", async (event) => {
   accessMessage.textContent = "";
   accessMessage.classList.remove("is-error");
   if (!activeRole) {
-    accessMessage.textContent = "Selecciona primero si eres estudiante o adulto responsable.";
+    accessMessage.textContent = "Selecciona primero si eres estudiante, invitado o adulto responsable.";
     accessMessage.classList.add("is-error");
     return;
   }
 
   const isAdult = activeRole === "adult";
+  const isGuest = activeRole === "guest";
   const adultNameField = document.querySelector("#adult-name");
   const adultDuiField = document.querySelector("#adult-dui");
   const adultPhoneField = document.querySelector("#adult-phone");
-  if (!isAdult && studentCodeField.required && !studentCodeField.value.trim()) {
+  if (!isAdult && !isGuest && studentCodeField.required && !studentCodeField.value.trim()) {
     accessMessage.textContent = "Ingresa el código de verificación de un solo uso entregado por el INA, por ejemplo 1F 02.";
     accessMessage.classList.add("is-error");
     studentCodeField.focus();
     return;
   }
   const accessCode = studentCodeField.value.replace(/\s+/g, "").toLowerCase();
-  if (!isAdult && studentCodeField.required && !/^(?:[a-f0-9]{4}|[a-f0-9]{48})$/.test(accessCode)) {
+  if (!isAdult && !isGuest && studentCodeField.required && !/^(?:[a-f0-9]{4}|[a-f0-9]{48})$/.test(accessCode)) {
     accessMessage.textContent = "Ingresa el código completo entregado por el INA, por ejemplo 1F 02.";
     accessMessage.classList.add("is-error");
     studentCodeField.focus();
@@ -3451,6 +3470,11 @@ accessForm.addEventListener("submit", async (event) => {
         adultFields.querySelectorAll("input").forEach((input) => { input.value = ""; });
         return;
       }
+      if (isGuest) {
+        accessMessage.textContent = "Acceso invitado activado. Puedes probar la aplicación sin enviar datos personales.";
+        showApp({ role: activeRole });
+        return;
+      }
 
       const user = await window.INACloud.signInAnonymously();
       await window.INACloud.registerAnonymousStudent(accessCode);
@@ -3458,14 +3482,16 @@ accessForm.addEventListener("submit", async (event) => {
       showApp({ role: activeRole, studentId: user.id });
     } catch (error) {
       studentCodeField.value = "";
-      if (!isAdult && window.INACloud?.configured) {
+      if (!isAdult && !isGuest && window.INACloud?.configured) {
         studentCodeField.required = true;
         studentCodeField.hidden = false;
         document.querySelector("#student-code-label").hidden = false;
       }
       accessMessage.textContent = isAdult
         ? "No se pudo solicitar el enlace. Comprueba que el correo pertenezca a una cuenta invitada por el INA."
-        : "No se pudo autorizar la sesión. Comprueba que el código del INA esté vigente y no se haya usado antes.";
+        : isGuest
+          ? "No se pudo iniciar la sesión de invitado en este navegador. Inténtalo otra vez."
+          : "No se pudo autorizar la sesión. Comprueba que el código del INA esté vigente y no se haya usado antes.";
       accessMessage.classList.add("is-error");
       console.error("No se pudo iniciar el acceso protegido a reportes:", error);
     } finally {
