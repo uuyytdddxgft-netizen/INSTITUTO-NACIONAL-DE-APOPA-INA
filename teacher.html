@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#123b70">
+    <meta name="description" content="Panel privado de seguimiento de reportes de INA Reporta.">
+    <title>Panel docente | INA Reporta</title>
+    <link rel="icon" href="icons/ina-192.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="teacher.css">
+    <script src="cloud-config.js" defer></script>
+    <script src="cloud-client.js" defer></script>
+    <script src="teacher.js?v=2" defer></script>
+  </head>
+  <body class="teacher-page">
+    <header class="site-header">
+      <a class="brand" href="index.html">
+        <img src="icons/ina-192.svg" alt="" width="44" height="44">
+        <span><strong>INA Reporta</strong><small>Panel privado docente</small></span>
+      </a>
+      <button class="sign-out-button" id="teacher-sign-out" type="button" hidden>Salir</button>
+    </header>
+
+    <main class="teacher-main">
+      <section class="teacher-login" id="teacher-login" aria-labelledby="teacher-title">
+        <p class="eyebrow">Solo personal autorizado</p>
+        <h1 id="teacher-title">Panel docente</h1>
+        <p class="teacher-copy" id="teacher-login-copy">Inicia sesión con tu correo institucional. La cuenta debe estar asignada como docente y asociada a los estudiantes que puede consultar.</p>
+        <form id="teacher-login-form" class="access-card">
+          <label class="field-label" for="teacher-email">Correo institucional</label>
+          <input id="teacher-email" name="email" type="email" autocomplete="username" placeholder="docente@clases.edu.sv" required>
+          <p class="access-hint">Se enviará un enlace de acceso de un solo uso. No se permite acceso público ni el rol se elige desde este formulario.</p>
+          <button class="button button-primary" id="teacher-login-submit" type="submit">Enviar enlace seguro</button>
+          <p class="form-message" id="teacher-login-message" role="status" aria-live="polite"></p>
+        </form>
+        <p class="prototype-note" id="teacher-setup-note">El panel no permite crear cuentas ni otorgar permisos. La administración del instituto debe autorizar este usuario.</p>
+      </section>
+
+      <section class="teacher-dashboard" id="teacher-dashboard" hidden aria-labelledby="dashboard-title">
+        <div class="dashboard-title-row">
+          <div>
+            <p class="eyebrow">Instituto Nacional de Apopa</p>
+            <h1 id="dashboard-title">Historial de reportes</h1>
+            <p class="teacher-copy">Se muestran reportes de estudiantes y adultos responsables de la institución. Las búsquedas y aperturas de fotos se registran para auditoría.</p>
+          </div>
+          <span class="header-tag">Docente autorizado</span>
+        </div>
+
+        <div class="dashboard-stats" aria-live="polite">
+          <article class="stat-card"><span>Resultados</span><strong id="result-count">0</strong></article>
+          <article class="stat-card"><span>Pendientes (página actual)</span><strong id="pending-count">0</strong></article>
+          <article class="stat-card"><span>Últimas 24 h (página actual)</span><strong id="recent-count">0</strong></article>
+        </div>
+
+        <form class="teacher-filters" id="teacher-filters">
+          <div class="filter-field">
+            <label for="filter-from">Desde</label>
+            <input id="filter-from" name="from" type="date">
+          </div>
+          <div class="filter-field">
+            <label for="filter-to">Hasta</label>
+            <input id="filter-to" name="to" type="date">
+          </div>
+          <div class="filter-field">
+            <label for="filter-category">Tipo</label>
+            <select id="filter-category" name="category">
+              <option value="">Todos</option>
+              <option>Basureros y limpieza</option>
+              <option>Baños</option>
+              <option>Chalets</option>
+              <option>Ruido</option>
+              <option>Agua</option>
+              <option>Infraestructura</option>
+              <option>Electricidad</option>
+              <option>Seguridad</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="filter-student">ID interno del estudiante (opcional)</label>
+            <input id="filter-student" name="studentId" type="text" inputmode="text" autocomplete="off" placeholder="UUID autorizado">
+          </div>
+          <div class="filter-field filter-search">
+            <label for="filter-search">Buscar</label>
+            <input id="filter-search" name="search" type="search" maxlength="100" placeholder="Descripción, lugar o tipo">
+          </div>
+          <button class="button button-primary filter-submit" type="submit">Buscar reportes</button>
+        </form>
+
+        <p class="teacher-error" id="teacher-error" role="status" aria-live="polite"></p>
+        <div class="teacher-report-list" id="teacher-report-list" aria-live="polite"></div>
+        <nav class="pagination" aria-label="Paginación de reportes">
+          <button class="filter-chip" id="previous-page" type="button">← Anterior</button>
+          <span id="page-label">Página 1</span>
+          <button class="filter-chip" id="next-page" type="button">Siguiente →</button>
+        </nav>
+      </section>
+    </main>
+    <footer>
+      <span class="footer-mark">INA</span>
+      <p>Acceso exclusivo para personal autorizado.<br><strong>Instituto Nacional de Apopa</strong></p>
+    </footer>
+  </body>
+</html>
