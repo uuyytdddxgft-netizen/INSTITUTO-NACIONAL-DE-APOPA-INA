@@ -2391,7 +2391,7 @@ footer strong {
         <div class="access-profile-fields" id="student-fields" hidden>
           <div class="access-login-fields" id="student-code-fields" hidden>
             <label class="field-label" id="student-code-label" for="student-access-code">Código de acceso del INA</label>
-            <input id="student-access-code" name="student-access-code" type="password" autocomplete="one-time-code" maxlength="48" pattern="[a-fA-F0-9]{48}" title="Ingresa el código de acceso de 48 caracteres entregado por el INA." hidden>
+            <input id="student-access-code" name="student-access-code" type="password" autocomplete="one-time-code" autocapitalize="characters" inputmode="text" maxlength="48" spellcheck="false" title="Ingresa el código de verificación del INA, por ejemplo 1F 02." hidden>
           </div>
         </div>
         <div class="access-profile-fields" id="adult-fields" hidden>
@@ -2907,8 +2907,7 @@ function createAnonymousSessionId() {
 function configureAccessForRole(role) {
   activeRole = role;
   const isAdult = role === "adult";
-  const hasAnonymousCloudSession = Boolean(window.INACloud?.session?.user?.is_anonymous);
-  const studentCodeRequired = !isAdult && Boolean(window.INACloud?.configured) && !hasAnonymousCloudSession;
+  const studentCodeRequired = !isAdult && Boolean(window.INACloud?.configured);
   const adultEmailRequired = isAdult && Boolean(window.INACloud?.configured);
   studentFields.hidden = isAdult;
   adultFields.hidden = !isAdult;
@@ -2933,7 +2932,7 @@ function configureAccessForRole(role) {
   document.querySelector("#access-description").textContent = isAdult
     ? "Completa el nombre, DUI y teléfono del adulto responsable."
     : window.INACloud?.configured
-      ? "Ingresa el código de acceso de un solo uso entregado por el INA."
+      ? "Ingresa el código de verificación de un solo uso entregado por el INA."
       : "Ingresa para probar la aplicación. En este modo, los reportes solo se guardan en este dispositivo.";
   document.querySelector("#access-hint").textContent = isAdult
     ? (window.INACloud?.configured
@@ -3399,7 +3398,14 @@ accessForm.addEventListener("submit", async (event) => {
   const adultDuiField = document.querySelector("#adult-dui");
   const adultPhoneField = document.querySelector("#adult-phone");
   if (!isAdult && studentCodeField.required && !studentCodeField.value.trim()) {
-    accessMessage.textContent = "No necesitas el NIE. Para proteger los reportes, solicita el código único de acceso a la administración del INA.";
+    accessMessage.textContent = "Ingresa el código de verificación de un solo uso entregado por el INA, por ejemplo 1F 02.";
+    accessMessage.classList.add("is-error");
+    studentCodeField.focus();
+    return;
+  }
+  const accessCode = studentCodeField.value.replace(/\s+/g, "").toLowerCase();
+  if (!isAdult && studentCodeField.required && !/^(?:[a-f0-9]{4}|[a-f0-9]{48})$/.test(accessCode)) {
+    accessMessage.textContent = "Ingresa el código completo entregado por el INA, por ejemplo 1F 02.";
     accessMessage.classList.add("is-error");
     studentCodeField.focus();
     return;
@@ -3447,7 +3453,6 @@ accessForm.addEventListener("submit", async (event) => {
       }
 
       const user = await window.INACloud.signInAnonymously();
-      const accessCode = studentCodeField.value.trim();
       await window.INACloud.registerAnonymousStudent(accessCode);
       studentCodeField.value = "";
       showApp({ role: activeRole, studentId: user.id });
@@ -3460,7 +3465,7 @@ accessForm.addEventListener("submit", async (event) => {
       }
       accessMessage.textContent = isAdult
         ? "No se pudo solicitar el enlace. Comprueba que el correo pertenezca a una cuenta invitada por el INA."
-        : "No se pudo autorizar la sesión. Verifica el código de un solo uso con el INA o inténtalo de nuevo.";
+        : "No se pudo autorizar la sesión. Comprueba que el código del INA esté vigente y no se haya usado antes.";
       accessMessage.classList.add("is-error");
       console.error("No se pudo iniciar el acceso protegido a reportes:", error);
     } finally {

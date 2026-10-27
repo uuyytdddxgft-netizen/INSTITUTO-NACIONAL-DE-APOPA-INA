@@ -1,4 +1,4 @@
-const CACHE_NAME = "ina-reporta-v14";
+const CACHE_NAME = "ina-reporta-v15";
 const APP_FILES = [
   "./",
   "./index.html",

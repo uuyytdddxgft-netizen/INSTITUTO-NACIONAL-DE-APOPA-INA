@@ -91,7 +91,7 @@
   async function registerAnonymousStudent(accessCode) {
     return rpc("register_anonymous_student", {
       p_institution_id: config.institutionId,
-      p_access_code: accessCode,
+      p_access_code: String(accessCode).replace(/\s+/g, "").toLowerCase(),
     });
   }
 

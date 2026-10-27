@@ -16,7 +16,7 @@ El flujo de GitHub Pages está en `.github/workflows/pages.yml`. Al subir el pro
 
 ## Alcance actual
 
-- Antes de la pantalla de carga, la aplicación pregunta si se usará como estudiante o como adulto responsable. El formulario del estudiante solicita el código de acceso de un solo uso del INA, sin pedir el NIE; el formulario adulto no muestra ese código y solicita nombre completo, DUI y teléfono. En el modo conectado, el correo autorizado del adulto se solicita aparte para recibir el enlace seguro de acceso.
+- Antes de la pantalla de carga, la aplicación pregunta si se usará como estudiante o como adulto responsable. El formulario del estudiante acepta el código de verificación de un solo uso del INA, incluidos códigos cortos como `1F 02`, sin pedir el NIE; el formulario adulto no muestra ese código y solicita nombre completo, DUI y teléfono. En el modo conectado, el correo autorizado del adulto se solicita aparte para recibir el enlace seguro de acceso.
 - El nombre, DUI y teléfono del adulto no se usan como credenciales, no se guardan en Supabase y se borran del formulario al solicitar el enlace o continuar en modo demostración. El correo se usa para iniciar sesión, pero el INA debe invitar previamente esa cuenta y vincularla al estudiante; escribir los datos del adulto no crea ni autoriza esa relación.
 - En modo Supabase, el estudiante inicia una sesión anónima protegida por Supabase Auth usando un código de acceso de un solo uso, sin iniciar sesión con correo ni proporcionar NIE. La sesión anónima no verifica la identidad del estudiante.
 - Solo una cuenta docente o administrativa previamente creada y autorizada puede consultar el historial institucional completo, incluidos reportes enviados por adultos responsables vinculados. Los enlaces mágicos no crean usuarios nuevos; el rol y la membresía institucional se verifican en el servidor y las búsquedas se registran para auditoría.
@@ -41,9 +41,9 @@ El flujo de GitHub Pages está en `.github/workflows/pages.yml`. Al subir el pro
 
 ## Configuración manual de Supabase
 
-El esquema y `supabase-migration-v2.sql` se aplicaron manualmente en el proyecto Supabase. Para actualizar la consulta docente existente y permitir que las cuentas docentes autorizadas consulten todos los reportes de la institución, aplica también `supabase-migration-v3.sql`. `cloud-config.js` ya contiene la URL del proyecto, la clave publishable y el UUID de la institución. El acceso anónimo se habilitó en Authentication y se verificó después de volver a cargar el panel. Para completar la puesta en marcha:
+El esquema y `supabase-migration-v2.sql` se aplicaron manualmente en el proyecto Supabase. Para actualizar la consulta docente existente y permitir que las cuentas docentes autorizadas consulten todos los reportes de la institución, aplica también `supabase-migration-v3.sql`. Si ya aplicaste v2, ejecuta además `supabase-migration-v4.sql` para que el servidor acepte códigos cortos como `1F 02` además de los códigos largos existentes. `cloud-config.js` ya contiene la URL del proyecto, la clave publishable y el UUID de la institución. El acceso anónimo se habilitó en Authentication y se verificó después de volver a cargar el panel. Para completar la puesta en marcha:
 
-1. En Supabase, revisa si ya existen las tablas del esquema (`profiles`, `institutions`, `institution_members`, `teacher_student_access`, `reports` y `report_audit_log`). Si el esquema aún no se instaló, ejecuta `supabase-schema.sql` una sola vez. Si ya existe, **no vuelvas a ejecutar el esquema base**: aplica las migraciones v2 y v3 en orden desde el SQL Editor. Las migraciones actualizan funciones sin borrar reportes. Si la v2 detecta políticas adicionales en `reports` o en `storage.objects` que podrían ampliar el acceso, cancela toda la transacción para que las revises antes de continuar; no las borres a ciegas.
+1. En Supabase, revisa si ya existen las tablas del esquema (`profiles`, `institutions`, `institution_members`, `teacher_student_access`, `reports` y `report_audit_log`). Si el esquema aún no se instaló, ejecuta `supabase-schema.sql` una sola vez. Si ya existe, **no vuelvas a ejecutar el esquema base**: aplica las migraciones v2, v3 y v4 en orden desde el SQL Editor. Las migraciones actualizan funciones sin borrar reportes. Si la v2 detecta políticas adicionales en `reports` o en `storage.objects` que podrían ampliar el acceso, cancela toda la transacción para que las revises antes de continuar; no las borres a ciegas.
 2. Verifica que `ina-report-photos` sea un bucket privado. La migración lo crea si falta, pero se detiene si encuentra un bucket existente con ajustes inseguros en vez de sobrescribirlos. No configures reglas de borrado automático para ese bucket o las tablas si necesitas conservar el historial.
 3. En Authentication, mantén activados **Allow new users to sign up** y **Allow anonymous sign-ins**: Supabase usa el endpoint de alta para crear sesiones anónimas y desactivar el primer ajuste bloquea el acceso estudiantil. El cliente solicita enlaces adultos/docentes con `create_user:false`, y el trigger del servidor restringe las cuentas de correo no invitadas; no habilites registro de cuentas desde la aplicación. Configura CAPTCHA/rate limits para reducir abuso de sesiones anónimas, SMTP y las URL de redirección HTTPS para la aplicación y `teacher.html`.
 4. Crea la institución una sola vez y copia su UUID:
@@ -70,7 +70,7 @@ El esquema y `supabase-migration-v2.sql` se aplicaron manualmente en el proyecto
      from generated
      returning code_hash
    )
-   select generated.code
+   select upper(generated.code) as codigo_de_un_solo_uso
    from generated
    join inserted on inserted.code_hash =
      encode(extensions.digest(convert_to(generated.code, 'UTF8'), 'sha256'), 'hex');
